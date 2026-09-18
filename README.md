@@ -40,7 +40,7 @@ PetCare+ 是面向宠物主人、兽医和管理员的一站式宠物健康管�
 | `/pets/:id` | 基本信息、就诊时间线、疫苗日历、保单列表 |
 | `/medical` | 就诊记录表格、处方侧栏、费用柱状图 |
 | `/vaccines` | 疫苗日历、待接种提醒、状态标记 |
-| `/insurance` | 保单卡片、理赔流程、保费/保障分析 |
+| `/insurance` | 保单卡片、剩余可理赔额度、理赔金额提交、理赔流程、保费/保障分析 |
 
 ## 核心实体贯穿链路
 
@@ -59,7 +59,7 @@ PetCare+ 是面向宠物主人、兽医和管理员的一站式宠物健康管�
 | PetSpecies | `backend/src/constants/enums.ts`、`pet.dto.ts`、`pet.repository.ts`、`schema.prisma` | `frontend/src/constants/enums.ts`、`pet.d.ts`、`PetList.tsx`、`PetAvatar.tsx`、`mockData.ts` |
 | VisitType | `backend/src/constants/enums.ts`、`medical.dto.ts`、`schema.prisma` | `frontend/src/constants/enums.ts`、`medical.d.ts`、`MedicalManagement.tsx`、`mockData.ts` |
 | VaccineStatus | `backend/src/constants/enums.ts`、`vaccine.dto.ts`、`notification.scheduler.ts`、`schema.prisma` | `frontend/src/constants/enums.ts`、`vaccine.d.ts`、`VaccineManagement.tsx`、`VaccineCalendar.tsx`、`StatusBadge.tsx` |
-| InsuranceStatus | `backend/src/constants/enums.ts`、`insurance.dto.ts`、`notification.scheduler.ts`、`schema.prisma` | `frontend/src/constants/enums.ts`、`insurance.d.ts`、`InsuranceCenter.tsx`、`InsurancePieChart.tsx`、`StatusBadge.tsx` |
+| InsuranceStatus | `backend/src/constants/enums.ts`、`insurance.dto.ts`、`insurance.validator.ts`、`insurance.service.ts`、`insurance.repository.ts`、`notification.scheduler.ts`、`schema.prisma` | `frontend/src/constants/enums.ts`、`insurance.d.ts`、`InsuranceCenter.tsx`、`ClaimForm.tsx`、`InsurancePieChart.tsx`、`StatusBadge.tsx` |
 | PolicyType | `backend/src/constants/enums.ts`、`insurance.dto.ts`、`schema.prisma` | `frontend/src/constants/enums.ts`、`insurance.d.ts`、`InsuranceCenter.tsx`、`mockData.ts` |
 | Gender | `backend/src/constants/enums.ts`、`pet.dto.ts`、`schema.prisma` | `frontend/src/constants/enums.ts`、`pet.d.ts`、`PetDetail.tsx`、`mockData.ts` |
 
@@ -82,6 +82,23 @@ PetCare+ 是面向宠物主人、兽医和管理员的一站式宠物健康管�
 ## 提醒通知
 
 `backend/src/modules/notifications/notification.scheduler.ts` 使用 Nest Schedule 扫描疫苗到期、保险续保和复诊提醒。前端 `NotificationBell.tsx` 拉取未读通知。
+
+## 理赔闭环
+
+提交理赔接口为 `PATCH /api/v1/insurance/:id/claim`，请求体 `{ "amount": 500, "requestId": "<uuid>" }`。
+
+- 提交前必须填写本次理赔金额（`amount > 0`）。
+- 同一张保单的已受理理赔金额落库在 `insurance_claims` 表并累计，重启后仍有效；累计 + 本次金额超出保障额度（`coverage`）时拒绝，响应 `data.remainingAmount` 返回剩余可理赔额度。
+- 生效（ACTIVE）和理赔中（CLAIMING）的保单都可继续提交，多笔小额理赔可累计至保额上限；已过期（EXPIRED）保单直接拒绝。
+- `requestId` 为幂等键（数据库唯一约束兜底），同一笔重复提交只计一次，不重复占额。
+- 保单列表与理赔响应均返回 `claimedAmount` / `remainingAmount`，保单卡片展示剩余可理赔额度并在提交成功后自动刷新。
+
+```bash
+curl -X PATCH http://localhost:38506/api/v1/insurance/<policyId>/claim \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 500, "requestId": "b7e2c1d2-0000-4000-8000-abcdefabcdef"}'
+```
 
 ## 目录结构
 

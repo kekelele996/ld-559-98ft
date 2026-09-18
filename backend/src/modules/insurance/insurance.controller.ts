@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { AuditLog } from '../../middleware/audit-log';
 import { AuthGuard } from '../auth/auth.guard';
-import { CreateInsuranceDto, UpdateInsuranceDto } from './insurance.dto';
+import { CreateInsuranceDto, SubmitClaimDto, UpdateInsuranceDto } from './insurance.dto';
 import { InsuranceService } from './insurance.service';
 
 @Controller('insurance')
@@ -22,8 +22,8 @@ export class InsuranceController {
 
   @Patch(':id/claim')
   @AuditLog('提交理赔')
-  async claim(@Param('id') id: string) {
-    return { code: 0, message: 'ok', data: await this.service.claim(id) };
+  async claim(@Param('id') id: string, @Body() dto: SubmitClaimDto) {
+    return { code: 0, message: 'ok', data: await this.service.claim(id, dto) };
   }
 
   @Patch(':id')

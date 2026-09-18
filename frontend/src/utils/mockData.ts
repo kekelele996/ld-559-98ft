@@ -98,6 +98,8 @@ export const mockInsurance: InsurancePolicy[] = [
     startDate: '2026-01-01',
     endDate: '2026-12-31',
     status: InsuranceStatus.ACTIVE,
+    claimedAmount: 800,
+    remainingAmount: 29200,
     pet: mockPets[0],
   },
   {
@@ -110,6 +112,8 @@ export const mockInsurance: InsurancePolicy[] = [
     startDate: '2025-07-01',
     endDate: '2026-07-01',
     status: InsuranceStatus.PENDING_RENEWAL,
+    claimedAmount: 0,
+    remainingAmount: 12000,
     pet: mockPets[1],
   },
 ];

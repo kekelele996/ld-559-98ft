@@ -60,7 +60,7 @@ async function main() {
       status: VaccineStatus.PENDING,
     },
   });
-  await prisma.insurancePolicy.create({
+  const policy = await prisma.insurancePolicy.create({
     data: {
       petId: pet.id,
       provider: 'PawShield',
@@ -71,6 +71,11 @@ async function main() {
       endDate: new Date('2026-12-31'),
       status: InsuranceStatus.ACTIVE,
     },
+  });
+  await prisma.insuranceClaim.upsert({
+    where: { requestId: 'seed-claim-demo-001' },
+    update: {},
+    create: { policyId: policy.id, amount: 800, requestId: 'seed-claim-demo-001' },
   });
 }
 

@@ -1,4 +1,4 @@
-import { IsDateString, IsEnum, IsNumber, IsString } from 'class-validator';
+import { IsDateString, IsEnum, IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
 import { InsuranceStatus, PolicyType } from '../../constants/enums';
 
 export class CreateInsuranceDto {
@@ -13,3 +13,8 @@ export class CreateInsuranceDto {
 }
 
 export class UpdateInsuranceDto extends CreateInsuranceDto {}
+
+export class SubmitClaimDto {
+  @IsNumber() @Min(0.01) amount!: number;
+  @IsString() @IsNotEmpty() requestId!: string;
+}
