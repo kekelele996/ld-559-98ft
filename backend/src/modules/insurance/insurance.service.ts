@@ -1,15 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { InsuranceStatus, UserRole } from '../../constants/enums';
-import { CreateInsuranceDto, UpdateInsuranceDto } from './insurance.dto';
+import { BusinessException } from '../../exceptions/business.exception';
+import { ClaimInsuranceDto, CreateInsuranceDto, UpdateInsuranceDto } from './insurance.dto';
 import { InsuranceRepository } from './insurance.repository';
-import { validatePolicyDates } from './insurance.validator';
+import { validateClaimableStatus, validatePolicyDates } from './insurance.validator';
 
 @Injectable()
 export class InsuranceService {
   constructor(private readonly repo: InsuranceRepository) {}
 
-  list(user: { sub: string; role: UserRole }, petId?: string) {
-    return this.repo.findMany(user, petId);
+  async list(user: { sub: string; role: UserRole }, petId?: string) {
+    const policies = await this.repo.findMany(user, petId);
+    return policies.map(({ claims, ...policy }) => {
+      const claimedAmount = claims.reduce((sum, claim) => sum + Number(claim.amount), 0);
+      return {
+        ...policy,
+        claimedAmount,
+        remainingCoverage: Number(policy.coverage) - claimedAmount,
+      };
+    });
   }
 
   create(dto: CreateInsuranceDto) {
@@ -17,8 +26,13 @@ export class InsuranceService {
     return this.repo.create({ ...dto, startDate: new Date(dto.startDate), endDate: new Date(dto.endDate) });
   }
 
-  claim(id: string) {
-    return this.repo.update(id, { status: InsuranceStatus.CLAIMING });
+  async claim(id: string, dto: ClaimInsuranceDto) {
+    const policy = await this.repo.findById(id);
+    if (!policy) throw new BusinessException('保单不存在', 40401);
+    validateClaimableStatus(policy.status as InsuranceStatus);
+    const existing = await this.repo.findClaimByRequestId(dto.requestId);
+    if (existing && existing.policyId !== id) throw new BusinessException('理赔请求单号已被其他保单占用');
+    return this.repo.submitClaim(id, dto.requestId, dto.amount);
   }
 
   update(id: string, dto: UpdateInsuranceDto) {
